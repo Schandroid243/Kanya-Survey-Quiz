@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1017741141507",
+    "project_id": "sign-in-810d6",
+    "storage_bucket": "sign-in-810d6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1017741141507:android:12614a50c69ed1b2f11036",
+        "android_client_info": {
+          "package_name": "com.example.quiztest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1017741141507-in3m2k4jvm4i9ah9e1gibvm9hnomso1d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClzhhvyZCK3hC-BS3j_ACazMMxxhdOpdQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1017741141507-f75ebo2i77kkee3i6amli4c6n2orj29n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
