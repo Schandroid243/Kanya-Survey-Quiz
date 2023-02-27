@@ -6,6 +6,9 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'package:mailer/smtp_server/gmail.dart';
 import 'package:http/http.dart' as http;
+import 'package:rflutter_alert/rflutter_alert.dart';
+
+import '../helper/google_signin_api.dart';
 
 class QuizApp extends StatefulWidget {
   @override
@@ -14,18 +17,40 @@ class QuizApp extends StatefulWidget {
 
 class _QuizAppState extends State<QuizApp> {
   final List<String> questions = [
-    'La terre est ronde ?',
-    'Le soleil est une planète ?',
-    'Les chats ont quatre pattes ?',
-    'L\'eau bout à 100 degrés Celsius ?',
+    'Dans l\'ensemble, êtes-vous satisfait de nos produits/services ?',
+    'Avez-vous Appréciez le cadre ?',
+    'Recommanderez-vous les produits/services de Kanya à d\'autres ?',
+    'Achèteriez-vous à nouveau nos produits/services ?',
+    'Plus de produits amélioreront-ils votre satisfaction globale ?'
   ];
 
-  final List<bool> answers = [
-    true,
-    false,
-    true,
-    true,
-  ];
+  final List<bool> answers = [true, false, true, true, true];
+
+  OverlayState? overlayState;
+  OverlayEntry? overlayEntry;
+  String modePaiement = '';
+  showOverlay(BuildContext context) {
+    overlayState = Overlay.of(context);
+    overlayEntry = OverlayEntry(
+        builder: (context) => Positioned(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(0, 0, 0, 0).withOpacity(0.8),
+                ),
+                child: Center(
+                  child: Image.asset(
+                    "assets/kanya.gif",
+                    width: 200,
+                    height: 200,
+                  ),
+                ),
+              ),
+            ));
+    overlayState!.insert(overlayEntry!);
+  }
+
+  bool showLoading = true;
+  bool showAlert = false;
 
   Future _sendNewEmail(emailbody) async {
     final msg = jsonEncode({
@@ -33,7 +58,7 @@ class _QuizAppState extends State<QuizApp> {
       'template_id': 'template_n98z524',
       'user_id': '7oxO0iKIjmZtqcydz',
       'template_params': {
-        'user_name': 'schad',
+        'user_name': 'a Kanya customer',
         'user_email': 'ngunzachadrack@aurtech.cd',
         'user_subject': 'Kanya Survey',
         'user_message': emailbody,
@@ -45,7 +70,14 @@ class _QuizAppState extends State<QuizApp> {
           'Content-Type': 'application/json',
         },
         body: msg);
-    print(response.body);
+
+    if (response.statusCode == 200) {
+      setState(() {
+        showAlert = true;
+        print(response.body);
+        print('${showAlert}');
+      });
+    }
   }
 
   Future _sendEmail(emailbody) async {
@@ -54,9 +86,9 @@ class _QuizAppState extends State<QuizApp> {
     String recipient = 'ngunzachadrack@aurtech.cd';
 
     final token = '';
-    //final smtpServer = gmail(username, password);
-    final smtpServer = SmtpServer('smtp-relay.sendinblue.com',
-        port: 587, username: username, password: password);
+    final smtpServer = gmailRelaySaslXoauth2(username, password);
+    // final smtpServer = SmtpServer('smtp-relay.sendinblue.com',
+    //     port: 587, username: username, password: password);
     final message = Message()
       ..from = Address(username, 'Flutter Quiz App')
       ..recipients.add(recipient)
@@ -89,104 +121,134 @@ class _QuizAppState extends State<QuizApp> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   TextEditingController emailController = TextEditingController();
   TextEditingController phoneNumberController = TextEditingController();
+  TextEditingController noteController = TextEditingController();
+  FocusNode myFocusNode = FocusNode();
   bool showContactInfo = false;
-  String kanyaByNightQuestion = "Voulez-vous participer à Kanya By Night ?";
+  String kanyaByNightQuestion =
+      " Souhaitez-vous être notifiez \n lors du lancement du programme Kanya By Night ?";
 
-  List<bool> userAnswers = List.generate(4, (index) => false);
+  List<bool> userAnswers = List.generate(5, (index) => false);
+
+  @override
+  void dispose() {
+    myFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     // final padding = MediaQuery.of(context).padding;
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.black,
-          image: DecorationImage(
-              image: Image.asset('assets/bg.png').image, fit: BoxFit.cover)),
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          extendBodyBehindAppBar: true,
-          key: _scaffoldKey,
-          appBar: AppBar(
-            elevation: 0.0,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (tapDown) {
+        myFocusNode.unfocus();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+            color: Colors.black,
+            image: DecorationImage(
+                image: Image.asset('assets/bg.png').image, fit: BoxFit.cover)),
+        child: SafeArea(
+          child: Scaffold(
             backgroundColor: Colors.transparent,
-          ),
-          body: Stack(
-            children: [
-              Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                      width: size.width,
-                      height: size.height * .8,
-                      child: Padding(
-                          padding:
-                              const EdgeInsets.only(left: 0, top: 15, right: 0),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  'Kanya Quiz Survey',
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 18),
-                                ),
-                                const SizedBox(height: 20),
-                                contactListWidget()
-                              ])))),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: Color.fromARGB(255, 2, 38, 17),
-            onPressed: () async {
-              bool allAnswered = true;
-              for (var answer in userAnswers) {
-                // ignore: unnecessary_null_comparison
-                if (answer == null) {
-                  allAnswered = false;
-                  break;
-                }
-              }
-
-              if (!allAnswered) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content:
-                          Text('Veuillez répondre à toutes les questions.')),
+            extendBodyBehindAppBar: true,
+            key: _scaffoldKey,
+            appBar: AppBar(
+              elevation: 0.0,
+              backgroundColor: Colors.transparent,
+            ),
+            body: Stack(
+              children: [
+                Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                        width: size.width,
+                        height: size.height * .8,
+                        child: Padding(
+                            padding: const EdgeInsets.only(
+                                left: 0, top: 0, right: 0, bottom: 0),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Kanya Quiz Survey',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 36),
+                                  ),
+                                  const SizedBox(height: 7),
+                                  contactListWidget()
+                                ])))),
+              ],
+            ),
+            floatingActionButton: FloatingActionButton(
+              backgroundColor: const Color.fromARGB(255, 2, 38, 17),
+              onPressed: () async {
+                var alertStyle = const AlertStyle(
+                  isCloseButton: false,
+                  isOverlayTapDismiss: false,
                 );
-                return;
-              }
 
-              String emailBody = '';
-              for (int i = 0; i < questions.length; i++) {
-                emailBody +=
-                    '${i + 1}. ${questions[i]}: ${userAnswers[i] ? 'Oui' : 'Non'}\n';
-              }
+                String emailBody = '';
+                for (int i = 0; i < questions.length; i++) {
+                  emailBody +=
+                      '${i + 1}. ${questions[i]}: ${userAnswers[i] ? 'Oui' : 'Non'}\n';
+                }
 
-              if (emailController.text.isNotEmpty &&
-                  phoneNumberController.text.isNotEmpty) {
-                emailBody +=
-                    '6. Email: ${emailController.text} \n Tél: ${phoneNumberController.text}';
-              }
+                if (emailController.text.isNotEmpty &&
+                    phoneNumberController.text.isNotEmpty) {
+                  emailBody +=
+                      '6. Email: ${emailController.text} \n Tél: ${phoneNumberController.text}';
+                }
 
-              final Email email = Email(
-                body: emailBody,
-                subject: 'Résultats du quiz',
-                recipients: ['schadrackngunza@gmail.com'],
-              );
+                if (noteController.text.isNotEmpty) {
+                  emailBody += '\n Observations: ${noteController.text}';
+                }
 
-              //await FlutterEmailSender.send(email);
-              //_sendEmail(emailBody);
-              _sendNewEmail(emailBody);
-              emailController.text = "";
-              phoneNumberController.text = "";
+                await _sendNewEmail(emailBody);
 
-              // ignore: use_build_context_synchronously
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Les réponses ont été envoyées par email.')),
-              );
-            },
-            child: const Icon(Icons.send),
+                if (showAlert) {
+                  // ignore: use_build_context_synchronously
+                  Alert(
+                      context: context,
+                      style: alertStyle,
+                      title: '',
+                      desc: "Merci de nous faire part de votre avis !",
+                      image: Image.asset(
+                        "assets/successCircle.gif",
+                        width: 100,
+                        height: 100,
+                      ),
+                      alertAnimation: fadeAlertAnimation,
+                      buttons: [
+                        DialogButton(
+                          color: const Color(0xff1e8d72),
+                          onPressed: () async {
+                            setState(() {
+                              emailController.text = "";
+                              phoneNumberController.text = "";
+                              noteController.text = "";
+                              emailBody = '';
+                              userAnswers = List.generate(5, (index) => false);
+                              showAlert = false;
+                              myFocusNode.unfocus();
+                              if (showContactInfo) {
+                                showContactInfo = false;
+                              }
+                            });
+                            Navigator.pop(context);
+                          },
+                          width: 120,
+                          child: const Text(
+                            "Ok",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      ]).show();
+                }
+              },
+              child: const Icon(Icons.send),
+            ),
           ),
         ),
       ),
@@ -205,43 +267,112 @@ class _QuizAppState extends State<QuizApp> {
         child: Column(
           children: [
             Flexible(
-              flex: 4,
-              child: ListView.builder(
-                itemCount: questions.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    color: const Color.fromARGB(255, 206, 188, 95),
-                    elevation: 6.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
-                    child: ListTile(
-                      title: Text(questions[index],
-                          style: const TextStyle(
-                              color: Color.fromARGB(255, 2, 38, 17))),
-                      trailing: DropdownButton<bool>(
-                        value: userAnswers[index],
-                        onChanged: (bool? value) {
-                          setState(() {
-                            userAnswers[index] = value!;
-                          });
-                        },
-                        items: <bool>[true, false]
-                            .map<DropdownMenuItem<bool>>((bool value) {
-                          return DropdownMenuItem<bool>(
-                            value: value,
-                            child: Text(value ? 'Oui' : 'Non'),
-                          );
-                        }).toList(),
+              flex: 5,
+              child: Container(
+                padding: const EdgeInsets.only(top: 2),
+                child: ListView.builder(
+                  itemCount: questions.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 10, right: 10),
+                      child: Card(
+                        color: const Color.fromARGB(255, 206, 188, 95),
+                        elevation: 6.0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ListTile(
+                                      title: Text(questions[index],
+                                          style: const TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 2, 38, 17)))),
+                                ),
+                                Column(
+                                  children: [
+                                    Radio(
+                                      value: true,
+                                      groupValue: userAnswers[index],
+                                      activeColor: Colors.green,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          userAnswers[index] = val!;
+                                        });
+                                      },
+                                    ),
+                                    const Text("Oui",
+                                        style: TextStyle(
+                                            color: Color.fromARGB(
+                                                255, 2, 38, 17))),
+                                    const SizedBox(
+                                      height: 10,
+                                    )
+                                  ],
+                                ),
+                                const SizedBox(
+                                  width: 5,
+                                ),
+                                Column(
+                                  children: [
+                                    Radio(
+                                      value: false,
+                                      groupValue: userAnswers[index],
+                                      activeColor: Colors.red,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          userAnswers[index] = val!;
+                                        });
+                                      },
+                                    ),
+                                    const Text("Non",
+                                        style: TextStyle(
+                                            color: Color.fromARGB(
+                                                255, 2, 38, 17))),
+                                    const SizedBox(
+                                      height: 10,
+                                    )
+                                  ],
+                                )
+                              ],
+                            )
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
+            const SizedBox(
+              height: 10,
+            ),
             Flexible(
-              flex: 2,
+              flex: 5,
               child: Column(children: [
+                Container(
+                  padding: const EdgeInsets.only(left: 10, right: 10),
+                  child: TextField(
+                    style: const TextStyle(color: Colors.black),
+                    controller: noteController,
+                    focusNode: myFocusNode,
+                    decoration: InputDecoration(
+                        fillColor: Colors.grey.shade100,
+                        filled: true,
+                        icon: const Icon(Icons.note),
+                        labelText: 'Observations',
+                        hintText: 'Laissez-nous une note !',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        )),
+                  ),
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
                 Container(
                   padding: const EdgeInsets.only(left: 10, right: 10),
                   child: Row(
@@ -249,7 +380,8 @@ class _QuizAppState extends State<QuizApp> {
                       Text(
                         kanyaByNightQuestion,
                         style: const TextStyle(
-                            color: Color.fromARGB(255, 2, 38, 17)),
+                            color: Color.fromARGB(255, 2, 38, 17),
+                            fontSize: 18),
                       ),
                       const SizedBox(
                         width: 15,
@@ -272,14 +404,20 @@ class _QuizAppState extends State<QuizApp> {
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        padding: const EdgeInsets.only(
+                          left: 10,
+                          right: 10,
+                        ),
                         child: TextField(
                           style: const TextStyle(color: Colors.black),
                           controller: emailController,
+                          focusNode: myFocusNode,
                           decoration: InputDecoration(
                               fillColor: Colors.grey.shade100,
                               filled: true,
-                              hintText: "Email",
+                              icon: const Icon(Icons.mail),
+                              labelText: 'Entrer Email',
+                              hintText: 'ex: exemple@exemple.com',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
                               )),
@@ -289,14 +427,18 @@ class _QuizAppState extends State<QuizApp> {
                         height: 20,
                       ),
                       Container(
-                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        padding: const EdgeInsets.only(
+                            left: 10, right: 10, bottom: 5),
                         child: TextField(
                           style: const TextStyle(color: Colors.black),
                           controller: phoneNumberController,
+                          focusNode: myFocusNode,
                           decoration: InputDecoration(
                               fillColor: Colors.grey.shade100,
                               filled: true,
-                              hintText: "Num Tél",
+                              icon: const Icon(Icons.phone),
+                              labelText: 'Numéro de téléphone',
+                              hintText: '+2438500008765',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
                               )),
@@ -309,6 +451,20 @@ class _QuizAppState extends State<QuizApp> {
             )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget fadeAlertAnimation(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return Align(
+      child: FadeTransition(
+        opacity: animation,
+        child: child,
       ),
     );
   }
