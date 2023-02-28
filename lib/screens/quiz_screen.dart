@@ -17,11 +17,11 @@ class QuizApp extends StatefulWidget {
 
 class _QuizAppState extends State<QuizApp> {
   final List<String> questions = [
-    'Dans l\'ensemble, êtes-vous satisfait de nos produits/services ?',
-    'Avez-vous Appréciez le cadre ?',
-    'Recommanderez-vous les produits/services de Kanya à d\'autres ?',
-    'Achèteriez-vous à nouveau nos produits/services ?',
-    'Plus de produits amélioreront-ils votre satisfaction globale ?'
+    'Seriez-vous prêt à revenir dans ce restaurant à l\'avenir ?',
+    'Avez-vous apprécié votre repas ?',
+    'Êtes-vous satisfait du service qui vous a été offert ?',
+    'Était-ce votre première visite dans ce restaurant ?',
+    'Recommanderiez-vous ce restaurant à un ami ?'
   ];
 
   final List<bool> answers = [true, false, true, true, true];
@@ -74,6 +74,8 @@ class _QuizAppState extends State<QuizApp> {
     if (response.statusCode == 200) {
       setState(() {
         showAlert = true;
+        showLoading = false;
+        overlayEntry!.remove();
         print(response.body);
         print('${showAlert}');
       });
@@ -123,32 +125,40 @@ class _QuizAppState extends State<QuizApp> {
   TextEditingController phoneNumberController = TextEditingController();
   TextEditingController noteController = TextEditingController();
   FocusNode myFocusNode = FocusNode();
+  FocusNode myFocusNode1 = FocusNode();
+  FocusNode myFocusNode2 = FocusNode();
   bool showContactInfo = false;
   String kanyaByNightQuestion =
-      " Souhaitez-vous être notifiez \n lors du lancement du programme Kanya By Night ?";
+      " Souhaitez-vous être notifié \n lors du lancement du programme Kanya By Night ?";
 
   List<bool> userAnswers = List.generate(5, (index) => false);
 
   @override
   void dispose() {
     myFocusNode.dispose();
+    myFocusNode1.dispose();
+    myFocusNode2.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    double h = 8.5;
     // final padding = MediaQuery.of(context).padding;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTapDown: (tapDown) {
         myFocusNode.unfocus();
+        myFocusNode1.unfocus();
+        myFocusNode2.unfocus();
       },
       child: Container(
         decoration: BoxDecoration(
             color: Colors.black,
             image: DecorationImage(
-                image: Image.asset('assets/bg.png').image, fit: BoxFit.cover)),
+                image: Image.asset('assets/bgSurvey.png').image,
+                fit: BoxFit.cover)),
         child: SafeArea(
           child: Scaffold(
             backgroundColor: Colors.transparent,
@@ -172,11 +182,11 @@ class _QuizAppState extends State<QuizApp> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   const Text(
-                                    'Kanya Quiz Survey',
+                                    '',
                                     style: TextStyle(
                                         color: Colors.white, fontSize: 36),
                                   ),
-                                  const SizedBox(height: 7),
+                                  const SizedBox(height: 0),
                                   contactListWidget()
                                 ])))),
               ],
@@ -184,6 +194,9 @@ class _QuizAppState extends State<QuizApp> {
             floatingActionButton: FloatingActionButton(
               backgroundColor: const Color.fromARGB(255, 2, 38, 17),
               onPressed: () async {
+                if (showLoading) {
+                  showOverlay(context);
+                }
                 var alertStyle = const AlertStyle(
                   isCloseButton: false,
                   isOverlayTapDismiss: false,
@@ -232,6 +245,8 @@ class _QuizAppState extends State<QuizApp> {
                               userAnswers = List.generate(5, (index) => false);
                               showAlert = false;
                               myFocusNode.unfocus();
+                              myFocusNode1.unfocus();
+                              myFocusNode2.unfocus();
                               if (showContactInfo) {
                                 showContactInfo = false;
                               }
@@ -259,10 +274,10 @@ class _QuizAppState extends State<QuizApp> {
     return Expanded(
       child: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.only(
               topRight: Radius.circular(25.0), topLeft: Radius.circular(25.0)),
-          color: Colors.white,
+          color: Colors.grey.shade200,
         ),
         child: Column(
           children: [
@@ -276,7 +291,8 @@ class _QuizAppState extends State<QuizApp> {
                     return Padding(
                       padding: const EdgeInsets.only(left: 10, right: 10),
                       child: Card(
-                        color: const Color.fromARGB(255, 206, 188, 95),
+                        color: Colors
+                            .white, //const Color.fromARGB(255, 206, 188, 95),
                         elevation: 6.0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.0),
@@ -354,19 +370,26 @@ class _QuizAppState extends State<QuizApp> {
               flex: 5,
               child: Column(children: [
                 Container(
-                  padding: const EdgeInsets.only(left: 10, right: 10),
+                  padding: const EdgeInsets.only(left: 10, right: 10, top: 10),
                   child: TextField(
                     style: const TextStyle(color: Colors.black),
                     controller: noteController,
                     focusNode: myFocusNode,
+                    keyboardType: TextInputType.multiline,
                     decoration: InputDecoration(
                         fillColor: Colors.grey.shade100,
                         filled: true,
+                        hoverColor: const Color.fromARGB(255, 206, 188, 95),
                         icon: const Icon(Icons.note),
                         labelText: 'Observations',
                         hintText: 'Laissez-nous une note !',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(
+                              color: myFocusNode.hasFocus
+                                  ? const Color.fromARGB(255, 206, 188, 95)
+                                  : Colors.grey,
+                              width: 1),
                         )),
                   ),
                 ),
@@ -404,17 +427,20 @@ class _QuizAppState extends State<QuizApp> {
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.only(
-                          left: 10,
-                          right: 10,
-                        ),
+                        padding:
+                            const EdgeInsets.only(left: 10, right: 10, top: 10),
                         child: TextField(
                           style: const TextStyle(color: Colors.black),
                           controller: emailController,
-                          focusNode: myFocusNode,
+                          focusNode: myFocusNode1,
+                          keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
                               fillColor: Colors.grey.shade100,
                               filled: true,
+                              focusColor:
+                                  const Color.fromARGB(255, 206, 188, 95),
+                              hoverColor:
+                                  const Color.fromARGB(255, 206, 188, 95),
                               icon: const Icon(Icons.mail),
                               labelText: 'Entrer Email',
                               hintText: 'ex: exemple@exemple.com',
@@ -432,10 +458,15 @@ class _QuizAppState extends State<QuizApp> {
                         child: TextField(
                           style: const TextStyle(color: Colors.black),
                           controller: phoneNumberController,
-                          focusNode: myFocusNode,
+                          focusNode: myFocusNode2,
+                          keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
                               fillColor: Colors.grey.shade100,
                               filled: true,
+                              focusColor:
+                                  const Color.fromARGB(255, 206, 188, 95),
+                              hoverColor:
+                                  const Color.fromARGB(255, 206, 188, 95),
                               icon: const Icon(Icons.phone),
                               labelText: 'Numéro de téléphone',
                               hintText: '+2438500008765',
