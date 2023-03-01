@@ -129,7 +129,7 @@ class _QuizAppState extends State<QuizApp> {
   FocusNode myFocusNode2 = FocusNode();
   bool showContactInfo = false;
   String kanyaByNightQuestion =
-      " Souhaitez-vous être notifié \n lors du lancement du programme Kanya By Night ?";
+      " Souhaitez-vous être notifié \n lors du lancement de Kanya By Night ?";
 
   List<bool> userAnswers = List.generate(5, (index) => false);
 
